@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_N8N_WEBHOOK_URL=${REACT_APP_N8N_WEBHOOK_URL}
+      - REACT_APP_N8N_API_KEY=${REACT_APP_N8N_API_KEY}
+    restart: unless-stopped 
