@@ -22,49 +22,63 @@ function Templates() {
     try {
       console.log('Iniciando loadTemplates...');
       const response = await apiCalls.getTemplates();
-      console.log('Resposta da API (templates):', response.data);
+      console.log('Resposta COMPLETA da API (templates):', response);
+      console.log('Dados da Resposta da API (templates):', response.data);
       
       // Verifica se a resposta tem o formato esperado do n8n
       if (response.data && typeof response.data === 'object') {
+        console.log('Resposta é um objeto. Verificando formato...');
         // Se for um objeto com a propriedade templates
         if (response.data.templates && Array.isArray(response.data.templates)) {
+          console.log('Formato detectado: Objeto com propriedade templates (Array)');
           setTemplates(response.data.templates);
         } 
         // Se for um objeto com chaves que começam com "template:"
         else if (Object.keys(response.data).some(key => key.startsWith('template:'))) {
+          console.log('Formato detectado: Objeto com chaves template:ID');
           const templatesArray = Object.entries(response.data)
-            .filter(([key]) => key.startsWith('template:'))
+            .filter(([key]) => { 
+              console.log(`Filtrando chave: ${key}`);
+              return key.startsWith('template:');
+            })
             .map(([_, value]) => {
               try {
-                return typeof value === 'string' ? JSON.parse(value) : value;
+                console.log('Tentando parsear valor:', value);
+                const parsedValue = typeof value === 'string' ? JSON.parse(value) : value;
+                console.log('Valor parseado:', parsedValue);
+                return parsedValue;
               } catch (e) {
                 console.error('Erro ao parsear template:', e);
                 return null;
               }
             })
             .filter(template => template !== null);
+          console.log('Templates processados do formato template:ID:', templatesArray);
           setTemplates(templatesArray);
         }
         // Se for um array direto
         else if (Array.isArray(response.data)) {
+          console.log('Formato detectado: Array direto');
           setTemplates(response.data);
         } else {
-          console.error('Formato de resposta inválido:', response.data);
+          console.error('Formato de resposta inválido ou inesperado:', response.data);
           setTemplates([]);
         }
       } else {
-        console.error('Formato de resposta inválido:', response.data);
+        console.error('Formato de resposta inválido ou inesperado:', response.data);
         setTemplates([]);
       }
     } catch (error) {
-      console.error('Erro ao carregar templates:', error);
-      setTemplates([]);
+      console.error('Erro geral ao carregar templates:', error);
+      setTemplates([]); // Garante que templates é um array vazio em caso de erro
       alert('Erro ao carregar templates: ' + (error.response?.data?.message || error.message));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Templates: handleSubmit chamado.');
+    console.log('Templates: Dados do formulário:', formData);
     try {
       if (editingTemplate) {
         await apiCalls.updateTemplate(editingTemplate.id, formData);
@@ -109,16 +123,18 @@ function Templates() {
     }
   };
 
-  const filteredAndSortedTemplates = templates
-    .filter(template =>
-      template.name.toLowerCase().includes(filter.toLowerCase())
-    )
-    .sort((a, b) => {
-      if (sortBy === 'name') {
-        return a.name.localeCompare(b.name);
-      }
-      return 0;
-    });
+  const filteredAndSortedTemplates = Array.isArray(templates)
+    ? templates
+        .filter(template =>
+          template.name.toLowerCase().includes(filter.toLowerCase())
+        )
+        .sort((a, b) => {
+          if (sortBy === 'name') {
+            return a.name.localeCompare(b.name);
+          }
+          return 0;
+        })
+    : []; // Retorna um array vazio se templates não for um array
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -204,7 +220,12 @@ function Templates() {
               </div>
 
               <MessageEditor
-                onSave={(messages) => setFormData({ ...formData, messages })}
+                onSave={(messages) => {
+                  console.log('Templates: onSave callback do MessageEditor chamado.');
+                  console.log('Templates: Mensagens recebidas do editor:', messages);
+                  setFormData({ ...formData, messages });
+                  console.log('Templates: formData.messages atualizado.');
+                }}
                 initialMessages={formData.messages}
               />
 
