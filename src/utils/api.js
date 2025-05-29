@@ -108,13 +108,131 @@ export const apiCalls = {
       settings
     }),
 
-  updateGroupPhoto: (instanceId, groupId, photo) =>
-    api.post('/webhook/group-photo', {
+  // Funções para envio de mídia em binário
+  sendMediaMessage: (instanceId, groupId, file, caption = '') => {
+    const formData = new FormData();
+    
+    // Adiciona o corpo da mensagem no mesmo formato das mensagens de texto
+    const messageBody = {
+      action: 'sendBulk',
+      instanceId: instanceId,
+      groupIds: [groupId],
+      messages: [{
+        id: Date.now(),
+        type: file.type.startsWith('image/') ? 'image' :
+              file.type.startsWith('video/') ? 'video' :
+              file.type.startsWith('audio/') ? 'audio' : 'document',
+        content: caption,
+        options: null,
+        mentionAll: false,
+        delay: 0,
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size
+      }]
+    };
+
+    // Adiciona todos os campos ao FormData
+    formData.append('action', 'sendMedia');
+    formData.append('instanceId', instanceId);
+    formData.append('groupId', groupId);
+    formData.append('file', file);
+    formData.append('body', JSON.stringify(messageBody));
+    formData.append('messages', JSON.stringify(messageBody.messages));
+
+    return api.post('/webhook/messages', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
+
+  sendBulkMediaMessages: async (instanceId, groupIds, files, options = {}) => {
+    const formData = new FormData();
+    
+    // Adiciona o corpo da mensagem no mesmo formato das mensagens de texto
+    const messageBody = {
+      action: 'sendBulk',
+      instanceId: instanceId,
+      groupIds: groupIds,
+      messages: files.map((file, index) => ({
+        id: Date.now() + index,
+        type: file.type.startsWith('image/') ? 'image' :
+              file.type.startsWith('video/') ? 'video' :
+              file.type.startsWith('audio/') ? 'audio' : 'document',
+        content: '',
+        options: null,
+        mentionAll: false,
+        delay: options.delayBetweenMessages || 0,
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size
+      }))
+    };
+
+    // Adiciona todos os campos ao FormData
+    formData.append('action', 'sendBulkMedia');
+    formData.append('instanceId', instanceId);
+    formData.append('groupIds', JSON.stringify(groupIds));
+    formData.append('body', JSON.stringify(messageBody));
+    formData.append('messages', JSON.stringify(messageBody.messages));
+    
+    // Adiciona cada arquivo ao FormData
+    files.forEach((file, index) => {
+      formData.append(`file${index}`, file);
+    });
+
+    return api.post('/webhook/messages', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
+
+  updateGroupPhotoBinary: (instanceId, groupId, file) => {
+    const formData = new FormData();
+    
+    // Adiciona o corpo da mensagem no mesmo formato
+    const messageBody = {
+      action: 'updatePhoto',
+      instanceId: instanceId,
+      groupId: groupId,
+      photo: {
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        timestamp: new Date().toISOString()
+      }
+    };
+
+    // Adiciona todos os campos ao FormData
+    formData.append('action', 'updatePhoto');
+    formData.append('instanceId', instanceId);
+    formData.append('groupId', groupId);
+    formData.append('file', file);
+    formData.append('body', JSON.stringify(messageBody));
+
+    return api.post('/webhook/group-photo', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
+
+  // Modificar a função existente updateGroupPhoto para usar a nova versão binária
+  updateGroupPhoto: (instanceId, groupId, photo) => {
+    // Se a foto for um arquivo (File object), usa a versão binária
+    if (photo instanceof File) {
+      return apiCalls.updateGroupPhotoBinary(instanceId, groupId, photo);
+    }
+    // Se for base64, mantém o comportamento antigo
+    return api.post('/webhook/group-photo', {
       action: 'update',
       instanceId,
       groupId,
-      photo: photo // The photo is now just the base64 data without the prefix
-    }),
+      photo
+    });
+  },
 
   getGroupInviteLink: (instanceId, groupId) =>
     api.post('/webhook/group-invite', {
@@ -146,14 +264,27 @@ export const apiCalls = {
       groupId,
       messages
     }),
-
-  sendBulkMessages: (instanceId, groupIds, messages) =>
-    api.post('/webhook/messages', {
+  
+  sendBulkMessages: async (instanceId, groupIds, messages, options = {}) => {
+    console.log('Enviando mensagens em massa:', { 
+      instanceId, 
+      groupCount: groupIds.length, 
+      messageCount: messages.length 
+    });
+    
+    const response = await api.post('/webhook/messages', {
       action: 'sendBulk',
       instanceId,
       groupIds,
-      messages
-    }),
+      messages,
+      options: {
+        delayBetweenMessages: 2000, // 2 segundos entre mensagens
+        ...options
+      }
+    });
+    
+    return response;
+  },
 
   // Função para enviar mensagem em tempo real
   sendRealtimeMessage: (instanceId, groupId, message) =>

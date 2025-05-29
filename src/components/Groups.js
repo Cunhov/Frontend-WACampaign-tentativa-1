@@ -244,7 +244,7 @@ function Groups() {
       
       setSelectedGroups([]);
       setBulkEditMode(false);
-      setSelectedPhoto(null); // Clear the selected photo
+      setSelectedPhoto(null);
       
       if (errorCount === 0) {
         alert(`✅ ${successCount} grupos atualizados com sucesso!`);
@@ -452,13 +452,7 @@ function Groups() {
         alert('Arquivo muito grande. Máximo 2MB.');
         return;
       }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        // Remove the data:image/... prefix from the base64 string
-        const base64Data = event.target.result.split(',')[1];
-        setSelectedPhoto(base64Data);
-      };
-      reader.readAsDataURL(file);
+      setSelectedPhoto(file);
     }
   };
 

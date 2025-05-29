@@ -49,17 +49,14 @@ const MessageEditor = ({ onSave, initialMessages = [] }) => {
   const handleFileUpload = (type, event) => {
     const file = event.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const newMessages = [...messages];
-        newMessages[selectedMessageIndex] = {
-          ...newMessages[selectedMessageIndex],
-          content: e.target.result,
-          fileName: file.name
-        };
-        setMessages(newMessages);
+      const newMessages = [...messages];
+      newMessages[selectedMessageIndex] = {
+        ...newMessages[selectedMessageIndex],
+        content: file,
+        fileName: file.name,
+        fileType: file.type
       };
-      reader.readAsDataURL(file);
+      setMessages(newMessages);
     }
   };
 
@@ -256,6 +253,7 @@ const MessageEditor = ({ onSave, initialMessages = [] }) => {
           {Object.entries(messageTypes).map(([type, { icon, label }]) => (
             <button
               key={type}
+              type="button"
               onClick={() => addMessage(type)}
               className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
             >

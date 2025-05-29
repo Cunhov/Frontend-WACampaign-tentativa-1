@@ -805,6 +805,38 @@ const CampaignForm = ({
                   </div>
                 </div>
 
+                {/* Botão Selecionar Todos/Limpar Seleção */}
+                {sortedAndFilteredGroups.length > 0 && (
+                  <div className="mb-2 flex items-center justify-between bg-gray-50 p-2 rounded">
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.groupIds.length === sortedAndFilteredGroups.length && sortedAndFilteredGroups.length > 0}
+                        onChange={() => {
+                          if (formData.groupIds.length === sortedAndFilteredGroups.length && sortedAndFilteredGroups.length > 0) {
+                            setFormData({ ...formData, groupIds: [] });
+                          } else {
+                            setFormData({ ...formData, groupIds: sortedAndFilteredGroups.map(g => g.id) });
+                          }
+                        }}
+                        className="mr-2 transform scale-110"
+                      />
+                      <span className="font-medium">
+                        Selecionar Todos ({formData.groupIds.length}/{sortedAndFilteredGroups.length})
+                      </span>
+                    </label>
+                    {formData.groupIds.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, groupIds: [] })}
+                        className="text-red-500 hover:text-red-700 text-sm"
+                      >
+                        Limpar Seleção
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
                   {sortedAndFilteredGroups.map((group) => (
                     <label key={group.id} className="flex items-center mb-2 cursor-pointer">
