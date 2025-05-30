@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { apiCalls } from '../utils/api';
 import RealtimeMessageSender from './RealtimeMessageSender';
+import { DateTime } from 'luxon';
+
+// Obter o fuso horário da variável de ambiente, com fallback para UTC
+const APP_TIMEZONE = process.env.REACT_APP_TIMEZONE || 'UTC';
 
 function Campaigns() {
   const [campaigns, setCampaigns] = useState([]);
@@ -62,8 +66,17 @@ function Campaigns() {
         }
       }).filter(campaign => campaign !== null);
 
-      console.log('Campanhas processadas (antes de setar o estado):', campaignsArray);
-      setCampaigns(campaignsArray);
+      // Converter scheduledAt de UTC para o fuso horário da aplicação para exibição/edição
+      const processedCampaigns = campaignsArray.map(campaign => ({
+        ...campaign,
+        // Assume que o scheduledAt do backend está em ISO 8601 (UTC)
+        scheduledAt: campaign.scheduledAt 
+          ? DateTime.fromISO(campaign.scheduledAt, { zone: 'UTC' }).setZone(APP_TIMEZONE).toISO() 
+          : null,
+      }));
+
+      console.log('Campanhas processadas (antes de setar o estado):', processedCampaigns);
+      setCampaigns(processedCampaigns);
       console.log('Estado de campanhas atualizado.');
     } catch (error) {
       console.error('Erro geral ao carregar campanhas:', error);
@@ -173,15 +186,20 @@ function Campaigns() {
   };
 
   const startEditCampaign = (campaign) => {
-    const scheduledDate = new Date(campaign.scheduledAt);
+    // Usar Luxon para criar o objeto DateTime no fuso horário da aplicação
+    const scheduledDateTime = campaign.scheduledAt 
+      ? DateTime.fromISO(campaign.scheduledAt, { zone: APP_TIMEZONE })
+      : DateTime.now().setZone(APP_TIMEZONE);
+
     setEditingCampaign(campaign);
     setFormData({
       name: campaign.name,
       instanceId: campaign.instanceId,
       templateId: campaign.templateId,
       groupIds: campaign.groupIds || [],
-      scheduledDate: scheduledDate.toISOString().split('T')[0],
-      scheduledTime: scheduledDate.toTimeString().slice(0, 5)
+      // Formatar data e hora para os inputs do formulário
+      scheduledDate: scheduledDateTime.toISODate() || '',
+      scheduledTime: scheduledDateTime.toFormat('HH:mm') || ''
     });
     setShowForm(true);
     
@@ -192,9 +210,8 @@ function Campaigns() {
   };
 
   const duplicateCampaign = (campaign) => {
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const now = DateTime.now().setZone(APP_TIMEZONE);
+    const tomorrow = now.plus({ days: 1 });
     
     setEditingCampaign(null);
     setFormData({
@@ -202,8 +219,9 @@ function Campaigns() {
       instanceId: campaign.instanceId,
       templateId: campaign.templateId,
       groupIds: campaign.groupIds || [],
-      scheduledDate: tomorrow.toISOString().split('T')[0],
-      scheduledTime: now.toTimeString().slice(0, 5)
+      // Formatar data e hora para os inputs do formulário
+      scheduledDate: tomorrow.toISODate() || '',
+      scheduledTime: now.toFormat('HH:mm') || ''
     });
     setShowForm(true);
     
@@ -239,7 +257,8 @@ function Campaigns() {
     }
 
     try {
-      const newScheduledAt = new Date(`${newDate}T${newTime}`).toISOString();
+      // Criar DateTime no fuso horário da aplicação e converter para ISO (UTC) para enviar ao backend
+      const newScheduledAt = DateTime.fromISO(`${newDate}T${newTime}`, { zone: APP_TIMEZONE }).toUTC().toISO();
       
       for (const campaignId of selectedCampaigns) {
         await apiCalls.updateCampaign(campaignId, { scheduledAt: newScheduledAt });
@@ -302,17 +321,25 @@ function Campaigns() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const scheduledAt = new Date(`${formData.scheduledDate}T${formData.scheduledTime}`);
+      // Criar DateTime no fuso horário da aplicação e converter para ISO (UTC) para enviar ao backend
+      const scheduledAt = DateTime.fromISO(`${formData.scheduledDate}T${formData.scheduledTime}`, { zone: APP_TIMEZONE }).toUTC().toISO();
+      
+      const selectedTemplate = templates.find(t => t.id === formData.templateId);
+      
       const campaignData = {
         name: formData.name,
         instanceId: formData.instanceId,
-        templateId: formData.templateId,
+        templateId: selectedTemplate ? selectedTemplate.id : formData.templateId,
+        templateName: selectedTemplate ? selectedTemplate.name : '',
         groupIds: formData.groupIds,
-        scheduledAt: scheduledAt.toISOString()
+        scheduledAt: scheduledAt
       };
       
       console.log('Campaign data being sent:', campaignData);
       console.log('GroupIds:', campaignData.groupIds);
+      console.log('Template ID:', campaignData.templateId);
+      console.log('Template Name:', campaignData.templateName);
+      console.log('Scheduled At (ISO UTC):', campaignData.scheduledAt);
       
       if (!campaignData.groupIds || campaignData.groupIds.length === 0) {
         alert('Por favor, selecione pelo menos um grupo');
@@ -543,7 +570,11 @@ const CampaignCard = ({ campaign, bulkEditMode, selectedCampaigns, onSelect, onE
           <div className="inline-block">
             <h3 className="font-bold text-lg">{campaign.name}</h3>
             <p className="text-gray-600 text-sm">
-              Agendada para: {new Date(campaign.scheduledAt).toLocaleString('pt-BR')}
+              Agendada para: 
+              {/* Usar Luxon para exibir no fuso horário da aplicação */}
+              {campaign.scheduledAt 
+                ? DateTime.fromISO(campaign.scheduledAt, { zone: APP_TIMEZONE }).toLocaleString(DateTime.DATETIME_SHORT) 
+                : 'N/A'}
             </p>
             <p className="text-gray-600 text-sm">
               {campaign.groupIds?.length || 0} grupos | Template: {campaign.templateName || 'N/A'}
@@ -778,7 +809,9 @@ const CampaignForm = ({
               Grupos ({formData.groupIds.length} selecionados)
             </label>
             {loadingGroups ? (
-              <div className="text-center text-gray-500">Carregando grupos...</div>
+              <div className="text-center text-gray-500 flex items-center justify-center">
+                Carregando grupos... <span className="ml-2">⚙️</span>
+              </div>
             ) : (
               <>
                 <div className="mb-2 flex gap-4">

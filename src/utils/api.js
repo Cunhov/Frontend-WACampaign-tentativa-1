@@ -83,6 +83,7 @@ export const apiCalls = {
         name: campaign.name,
         instanceId: campaign.instanceId,
         templateId: campaign.templateId,
+        templateName: campaign.templateName,
         groupIds: campaign.groupIds,
         scheduledAt: campaign.scheduledAt
       }
