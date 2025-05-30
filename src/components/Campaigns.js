@@ -1,7 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { apiCalls } from '../utils/api';
 import RealtimeMessageSender from './RealtimeMessageSender';
 import { DateTime } from 'luxon';
+import { useGroups, useAllGroupsCache } from '../contexts/GroupContext';
+import DateTimePicker from 'react-datetime-picker';
+import 'react-datetime-picker/dist/DateTimePicker.css';
+import 'react-calendar/dist/Calendar.css';
+import 'react-clock/dist/Clock.css';
 
 // Obter o fuso horário da variável de ambiente, com fallback para UTC
 const APP_TIMEZONE = process.env.REACT_APP_TIMEZONE || 'UTC';
@@ -12,8 +17,6 @@ function Campaigns() {
   const [editingCampaign, setEditingCampaign] = useState(null);
   const [instances, setInstances] = useState([]);
   const [templates, setTemplates] = useState([]);
-  const [groups, setGroups] = useState([]);
-  const [loadingGroups, setLoadingGroups] = useState(false);
   const [groupSortBy, setGroupSortBy] = useState('name');
   const [groupFilter, setGroupFilter] = useState('');
   const [campaignFilter, setCampaignFilter] = useState('');
@@ -30,6 +33,9 @@ function Campaigns() {
     scheduledTime: ''
   });
   const [showRealtimeSender, setShowRealtimeSender] = useState(false);
+
+  const { groups, isLoadingGroups: isGroupsLoadingForInstance, refreshGroupsForInstance } = useGroups(formData.instanceId);
+  const { isLoadingGroups: isInitialLoading } = useAllGroupsCache();
 
   useEffect(() => {
     console.log('useEffect (Campaigns) acionado. Chamando funcoes de carregamento...');
@@ -158,33 +164,6 @@ function Campaigns() {
     }
   };
 
-  const loadGroups = async (instanceId) => {
-    console.log('Iniciando loadGroups para instância (Campaigns):', instanceId);
-    try {
-      setLoadingGroups(true);
-      console.log('Chamando apiCalls.getGroups...');
-      const response = await apiCalls.getGroups(instanceId);
-      console.log('Resposta do webhook (Groups in Campaigns):', response.data);
-
-      if (!response.data || !Array.isArray(response.data.groups)) {
-        console.error('Formato de dados inválido ou array de grupos ausente (Groups in Campaigns):', response.data);
-        setGroups([]);
-        return;
-      }
-
-      const groupsArray = response.data.groups;
-      console.log('Grupos processados (antes de setar o estado - Campaigns):', groupsArray);
-      setGroups(groupsArray);
-      console.log('Estado de grupos atualizado (Campaigns).');
-
-    } catch (error) {
-      console.error('Erro geral ao carregar grupos (Campaigns):', error);
-      setGroups([]);
-    } finally {
-      setLoadingGroups(false);
-    }
-  };
-
   const startEditCampaign = (campaign) => {
     // Usar Luxon para criar o objeto DateTime no fuso horário da aplicação
     const scheduledDateTime = campaign.scheduledAt 
@@ -202,11 +181,6 @@ function Campaigns() {
       scheduledTime: scheduledDateTime.toFormat('HH:mm') || ''
     });
     setShowForm(true);
-    
-    // Carregar grupos da instância
-    if (campaign.instanceId) {
-      loadGroups(campaign.instanceId);
-    }
   };
 
   const duplicateCampaign = (campaign) => {
@@ -224,10 +198,6 @@ function Campaigns() {
       scheduledTime: now.toFormat('HH:mm') || ''
     });
     setShowForm(true);
-    
-    if (campaign.instanceId) {
-      loadGroups(campaign.instanceId);
-    }
   };
 
   const handleBulkStatusUpdate = async (newStatus) => {
@@ -311,12 +281,6 @@ function Campaigns() {
       }
       return 0;
     });
-
-  useEffect(() => {
-    if (formData.instanceId) {
-      loadGroups(formData.instanceId);
-    }
-  }, [formData.instanceId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -492,7 +456,7 @@ function Campaigns() {
               instances={instances}
               templates={templates}
               groups={groups}
-              loadingGroups={loadingGroups}
+              loadingGroups={isInitialLoading}
               groupSortBy={groupSortBy}
               setGroupSortBy={setGroupSortBy}
               groupFilter={groupFilter}
@@ -704,7 +668,7 @@ const CampaignForm = ({
   setFormData, 
   instances, 
   templates, 
-  groups, 
+  groups,
   loadingGroups,
   groupSortBy,
   setGroupSortBy,
@@ -745,6 +709,7 @@ const CampaignForm = ({
               onChange={(e) => setFormData({...formData, instanceId: e.target.value})}
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
               required
+              disabled={loadingGroups}
             >
               <option value="">Selecione</option>
               {instances.map((instance) => (
@@ -803,95 +768,92 @@ const CampaignForm = ({
           </div>
         </div>
 
-        {groups.length > 0 && (
+        {formData.instanceId && !loadingGroups ? (
           <div className="mb-4">
             <label className="block text-gray-700 text-sm font-bold mb-2">
               Grupos ({formData.groupIds.length} selecionados)
             </label>
-            {loadingGroups ? (
-              <div className="text-center text-gray-500 flex items-center justify-center">
-                Carregando grupos... <span className="ml-2">⚙️</span>
+            <>
+              <div className="mb-2 flex gap-4">
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-1">Ordenar por:</label>
+                  <select
+                    value={groupSortBy}
+                    onChange={(e) => setGroupSortBy(e.target.value)}
+                    className="px-2 py-1 border rounded"
+                  >
+                    <option value="name">Nome</option>
+                    <option value="participants">Participantes</option>
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-gray-700 text-sm font-bold mb-1">Filtrar:</label>
+                  <input
+                    type="text"
+                    value={groupFilter}
+                    onChange={(e) => setGroupFilter(e.target.value)}
+                    placeholder="Filtrar grupos..."
+                    className="w-full px-2 py-1 border rounded"
+                  />
+                </div>
               </div>
-            ) : (
-              <>
-                <div className="mb-2 flex gap-4">
-                  <div>
-                    <label className="block text-gray-700 text-sm font-bold mb-1">Ordenar por:</label>
-                    <select
-                      value={groupSortBy}
-                      onChange={(e) => setGroupSortBy(e.target.value)}
-                      className="px-2 py-1 border rounded"
-                    >
-                      <option value="name">Nome</option>
-                      <option value="participants">Participantes</option>
-                    </select>
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-gray-700 text-sm font-bold mb-1">Filtrar:</label>
+
+              {sortedAndFilteredGroups.length > 0 && (
+                <div className="mb-2 flex items-center justify-between bg-gray-50 p-2 rounded">
+                  <label className="flex items-center cursor-pointer">
                     <input
-                      type="text"
-                      value={groupFilter}
-                      onChange={(e) => setGroupFilter(e.target.value)}
-                      placeholder="Filtrar grupos..."
-                      className="w-full px-2 py-1 border rounded"
+                      type="checkbox"
+                      checked={formData.groupIds.length === sortedAndFilteredGroups.length && sortedAndFilteredGroups.length > 0}
+                      onChange={() => {
+                        if (formData.groupIds.length === sortedAndFilteredGroups.length && sortedAndFilteredGroups.length > 0) {
+                          setFormData({ ...formData, groupIds: [] });
+                        } else {
+                          setFormData({ ...formData, groupIds: sortedAndFilteredGroups.map(g => g.id) });
+                        }
+                      }}
+                      className="mr-2 transform scale-110"
                     />
-                  </div>
+                    <span className="font-medium">
+                      Selecionar Todos ({formData.groupIds.length}/{sortedAndFilteredGroups.length})
+                    </span>
+                  </label>
+                  {formData.groupIds.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, groupIds: [] })}
+                      className="text-red-500 hover:text-red-700 text-sm"
+                    >
+                      Limpar Seleção
+                    </button>
+                  )}
                 </div>
+              )}
 
-                {/* Botão Selecionar Todos/Limpar Seleção */}
-                {sortedAndFilteredGroups.length > 0 && (
-                  <div className="mb-2 flex items-center justify-between bg-gray-50 p-2 rounded">
-                    <label className="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.groupIds.length === sortedAndFilteredGroups.length && sortedAndFilteredGroups.length > 0}
-                        onChange={() => {
-                          if (formData.groupIds.length === sortedAndFilteredGroups.length && sortedAndFilteredGroups.length > 0) {
-                            setFormData({ ...formData, groupIds: [] });
-                          } else {
-                            setFormData({ ...formData, groupIds: sortedAndFilteredGroups.map(g => g.id) });
-                          }
-                        }}
-                        className="mr-2 transform scale-110"
-                      />
-                      <span className="font-medium">
-                        Selecionar Todos ({formData.groupIds.length}/{sortedAndFilteredGroups.length})
+              <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
+                {sortedAndFilteredGroups.map((group) => (
+                  <label key={group.id} className="flex items-center mb-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.groupIds.includes(group.id)}
+                      onChange={() => toggleGroup(group.id)}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">{group.name} ({group.participants} participantes)</span>
+                    {group.isAdmin && (
+                      <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                        Admin
                       </span>
-                    </label>
-                    {formData.groupIds.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setFormData({ ...formData, groupIds: [] })}
-                        className="text-red-500 hover:text-red-700 text-sm"
-                      >
-                        Limpar Seleção
-                      </button>
                     )}
-                  </div>
-                )}
-
-                <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
-                  {sortedAndFilteredGroups.map((group) => (
-                    <label key={group.id} className="flex items-center mb-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.groupIds.includes(group.id)}
-                        onChange={() => toggleGroup(group.id)}
-                        className="mr-2"
-                      />
-                      <span className="text-sm">{group.name} ({group.participants} participantes)</span>
-                      {group.isAdmin && (
-                        <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
-                          Admin
-                        </span>
-                      )}
-                    </label>
-                  ))}
-                </div>
-              </>
-            )}
+                  </label>
+                ))}
+              </div>
+            </>
           </div>
-        )}
+        ) : formData.instanceId && loadingGroups ? (
+           <div className="text-center text-gray-500 flex items-center justify-center mb-4">
+             Carregando grupos... <span className="ml-2">⚙️</span>
+           </div>
+        ) : null}
 
         <div className="flex justify-end gap-2">
           <button
