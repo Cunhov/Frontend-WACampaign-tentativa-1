@@ -14,4 +14,10 @@ COPY . .
 
 EXPOSE 3000
 
-CMD ["npm", "start"] 
+# Create a non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN chown -R appuser:appgroup /app
+USER appuser
+
+# Use a shell script to start the application
+CMD ["sh", "-c", "npm start"] 
