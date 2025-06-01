@@ -84,7 +84,7 @@ function Templates() {
         await apiCalls.updateTemplate(editingTemplate.id, formData);
         alert('Template atualizado com sucesso!');
       } else {
-        await apiCalls.saveTemplate(formData);
+      await apiCalls.saveTemplate(formData);
         alert('Template criado com sucesso!');
       }
       await loadTemplates(); // Recarrega os templates antes de fechar o formulário
@@ -268,13 +268,13 @@ function Templates() {
                 >
                   ✏️
                 </button>
-                <button
-                  onClick={() => handleDelete(template.id)}
+              <button
+                onClick={() => handleDelete(template.id)}
                   className="p-2 text-red-500 hover:text-red-700 transition-colors"
                   title="Deletar template"
-                >
+              >
                   🗑️
-                </button>
+              </button>
               </div>
             </div>
 

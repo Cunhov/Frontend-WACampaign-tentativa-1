@@ -1,5 +1,5 @@
-# Dockerfile para desenvolvimento React na porta 3000
-FROM node:18-alpine
+# Stage 1: Build the React application
+FROM node:18-alpine as builder
 
 WORKDIR /app
 
@@ -12,7 +12,20 @@ RUN npm install
 # Copy source code
 COPY . .
 
-EXPOSE 3000
+RUN npm run build
+
+# Stage 2: Serve the application with Node.js
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install --only=production
+
+COPY --from=builder /app/build ./build
+COPY server.js .
+
+EXPOSE 8080
 
 # Create a non-root user
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup

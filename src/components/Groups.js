@@ -75,38 +75,42 @@ function Groups() {
       setInstances(instancesArray);
       console.log('Estado de instâncias atualizado (Groups).');
 
-       // Selecionar a primeira instância por padrão se houver e não houver uma selecionada
-      if (instancesArray.length > 0 && !selectedInstanceId) { // Usar selectedInstanceId aqui
-        setSelectedInstanceId(instancesArray[0].id); // E setar o ID
+      // Selecionar a primeira instância por padrão se houver e não houver uma selecionada
+      if (instancesArray.length > 0 && !selectedInstanceId) {
+        setSelectedInstanceId(instancesArray[0].id);
       }
 
     } catch (error) {
       console.error('Erro geral ao carregar instâncias (Groups):', error);
       console.error('Detalhes do erro (Groups):', error.message, error.response?.data);
       setInstances([]);
+      // Show error to user
+      alert('Erro ao carregar instâncias: ' + (error.response?.data?.message || error.message));
     }
   };
 
   // Atualizar estatísticas sempre que a lista de grupos (do cache) mudar
   useEffect(() => {
     if (groups && groups.length > 0) {
-       console.log('Lista de grupos do cache atualizada. Calculando estatísticas...');
-       const stats = {
-         total: groups.length,
-         adminGroups: groups.filter(g => g.isAdmin === true).length,
-         memberGroups: groups.filter(g => g.isAdmin !== true).length
-       };
+      console.log('Lista de grupos do cache atualizada. Calculando estatísticas...');
+      const stats = {
+        total: groups.length,
+        adminGroups: groups.filter(g => g.isAdmin === true).length,
+        memberGroups: groups.filter(g => g.isAdmin !== true).length
+      };
 
-       console.log('Estatísticas calculadas:', stats);
-       setStatistics(stats);
+      console.log('Estatísticas calculadas:', stats);
+      setStatistics(stats);
     } else {
-       // Resetar estatísticas se não houver grupos para a instância selecionada
-       setStatistics({ total: 0, adminGroups: 0, memberGroups: 0 });
+      // Resetar estatísticas se não houver grupos para a instância selecionada
+      setStatistics({ total: 0, adminGroups: 0, memberGroups: 0 });
     }
-     // Limpar seleção de grupos ao mudar de instância ou se os grupos sumirem
-     setSelectedGroups([]);
+  }, [groups]);
 
-  }, [groups]); // Depende da lista de grupos fornecida pelo hook useGroups
+  // Limpar seleção de grupos quando mudar de instância ou grupos
+  useEffect(() => {
+    setSelectedGroups([]);
+  }, [selectedInstanceId, groups]);
 
   const updateGroupSettings = async (groupId, settings) => {
     try {
@@ -313,10 +317,10 @@ function Groups() {
   // Filtrar e ordenar os grupos OBTIDOS DO CACHE
   const filteredAndSortedGroups = groups
     .filter(group => {
-      const matchesFilter = group.name.toLowerCase().includes(filter.toLowerCase());
+    const matchesFilter = group.name.toLowerCase().includes(filter.toLowerCase());
       // A lógica de `isAdmin` agora é mais robusta (verifica explicitamente true)
       const matchesAdmin = !adminOnly || group.isAdmin === true;
-      return matchesFilter && matchesAdmin;
+    return matchesFilter && matchesAdmin;
     })
     .sort((a, b) => {
       if (sortBy === 'name') {
@@ -529,18 +533,18 @@ function Groups() {
 
           {selectedInstanceId && !isGroupsLoadingForInstance && !isInitialLoading && (
             <>
-              <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2">
-                  Filtrar por nome
-                </label>
-                <input
-                  type="text"
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                  placeholder="Digite para filtrar..."
+          <div>
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Filtrar por nome
+            </label>
+            <input
+              type="text"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Digite para filtrar..."
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
-                />
-              </div>
+            />
+          </div>
 
               <div>
                 <label className="block text-gray-700 text-sm font-bold mb-2">
@@ -556,17 +560,17 @@ function Groups() {
                 </select>
               </div>
 
-              <div className="flex items-end">
+          <div className="flex items-end">
                 <label className="flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={adminOnly}
-                    onChange={(e) => setAdminOnly(e.target.checked)}
+              <input
+                type="checkbox"
+                checked={adminOnly}
+                onChange={(e) => setAdminOnly(e.target.checked)}
                     className="mr-2 transform scale-110"
-                  />
+              />
                   <span className="text-gray-700">Apenas grupos onde sou admin ({statistics.adminGroups})</span>
-                </label>
-              </div>
+            </label>
+          </div>
             </>
           )}
         </div>
@@ -742,9 +746,9 @@ function Groups() {
             </>
           ) : (
             <div className="text-center py-8 text-gray-500">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
               <p className="mt-2 text-gray-600">Carregando grupos para esta instância...</p>
-            </div>
+        </div>
           )}
         </>
       ) : (
@@ -838,11 +842,11 @@ function Groups() {
                 Cancelar
               </button>
             </div>
-          </div>
+        </div>
         </div>
       )}
     </div>
   );
 }
 
-export default Groups;
+export default Groups; 

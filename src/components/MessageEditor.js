@@ -49,14 +49,14 @@ const MessageEditor = ({ onSave, initialMessages = [] }) => {
   const handleFileUpload = (type, event) => {
     const file = event.target.files[0];
     if (file) {
-      const newMessages = [...messages];
-      newMessages[selectedMessageIndex] = {
-        ...newMessages[selectedMessageIndex],
+        const newMessages = [...messages];
+        newMessages[selectedMessageIndex] = {
+          ...newMessages[selectedMessageIndex],
         content: file,
         fileName: file.name,
         fileType: file.type
-      };
-      setMessages(newMessages);
+        };
+        setMessages(newMessages);
     }
   };
 

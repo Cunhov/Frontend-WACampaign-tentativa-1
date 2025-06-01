@@ -18,27 +18,27 @@ function App() {
     <Router>
       <GroupProvider>
         <GlobalLoadingIndicator />
-        <div className="min-h-screen bg-gray-100">
-          <Routes>
-            <Route 
-              path="/login" 
-              element={
-                isAuthenticated ? 
-                <Navigate to="/dashboard" /> : 
-                <Login setIsAuthenticated={setIsAuthenticated} />
-              } 
-            />
-            <Route 
-              path="/dashboard/*" 
-              element={
-                isAuthenticated ? 
-                <Dashboard setIsAuthenticated={setIsAuthenticated} /> : 
-                <Navigate to="/login" />
-              } 
-            />
-            <Route path="/" element={<Navigate to="/dashboard" />} />
-          </Routes>
-        </div>
+      <div className="min-h-screen bg-gray-100">
+        <Routes>
+          <Route 
+            path="/login" 
+            element={
+              isAuthenticated ? 
+              <Navigate to="/dashboard" /> : 
+              <Login setIsAuthenticated={setIsAuthenticated} />
+            } 
+          />
+          <Route 
+            path="/dashboard/*" 
+            element={
+              isAuthenticated ? 
+              <Dashboard setIsAuthenticated={setIsAuthenticated} /> : 
+              <Navigate to="/login" />
+            } 
+          />
+          <Route path="/" element={<Navigate to="/dashboard" />} />
+        </Routes>
+      </div>
       </GroupProvider>
     </Router>
   );

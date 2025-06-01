@@ -8,8 +8,46 @@ const api = axios.create({
   headers: {
     'Authorization': `Bearer ${API_KEY}`,
     'Content-Type': 'application/json'
-  }
+  },
+  withCredentials: true // Enable sending cookies in cross-origin requests
 });
+
+// Add response interceptor for better error handling
+api.interceptors.response.use(
+  response => {
+    // Validate response data
+    if (!response.data) {
+      throw new Error('Empty response from server');
+    }
+    return response;
+  },
+  error => {
+    console.error('API Error:', error.response?.data || error.message);
+    if (error.response?.status === 401) {
+      // Handle unauthorized access
+      localStorage.removeItem('authToken');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Helper function to validate response data
+const validateResponse = (response, expectedType = 'object') => {
+  if (!response.data) {
+    throw new Error('Empty response from server');
+  }
+  
+  if (expectedType === 'object' && typeof response.data !== 'object') {
+    throw new Error('Invalid response format: expected object');
+  }
+  
+  if (expectedType === 'array' && !Array.isArray(response.data)) {
+    throw new Error('Invalid response format: expected array');
+  }
+  
+  return response;
+};
 
 export const apiCalls = {
   // Autenticação
@@ -18,13 +56,13 @@ export const apiCalls = {
       action: 'login', 
       username, 
       password 
-    }),
+    }).then(response => validateResponse(response)),
   
   // Instâncias
   getInstances: () => 
     api.post('/webhook/instances', { 
       action: 'list' 
-    }),
+    }).then(response => validateResponse(response)),
   
   saveInstance: (instance) => 
     api.post('/webhook/instances', { 

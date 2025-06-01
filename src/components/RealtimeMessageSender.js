@@ -179,15 +179,15 @@ const RealtimeMessageSender = () => {
         </div>
         {/* Filtro e Seleção de Grupos */}
         {selectedInstance && (
-          <div className="mb-6">
+        <div className="mb-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 items-end">
               <div>
                 <label className="block text-gray-700 text-sm font-bold mb-1">Filtrar por nome</label>
-                <input
-                  type="text"
+            <input
+              type="text"
                   value={filterInput}
                   onChange={(e) => setFilterInput(e.target.value)}
-                  placeholder="Filtrar grupos..."
+              placeholder="Filtrar grupos..."
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -226,52 +226,52 @@ const RealtimeMessageSender = () => {
                 >
                   Limpar
                 </button>
-                <button
-                  onClick={handleSelectAll}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  {selectedGroups.length === filteredGroups.length ? 'Desselecionar Todos' : 'Selecionar Todos'}
-                </button>
-              </div>
+            <button
+              onClick={handleSelectAll}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              {selectedGroups.length === filteredGroups.length ? 'Desselecionar Todos' : 'Selecionar Todos'}
+            </button>
+          </div>
             </div>
             {loadingGroups ? (
               <div className="text-center text-gray-500">Carregando grupos...</div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto p-2">
-                {filteredGroups.map(group => (
-                  <div
-                    key={group.id}
-                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                      selectedGroups.includes(group.id)
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-blue-300'
-                    }`}
-                    onClick={() => handleGroupSelect(group.id)}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                        {group.pictureUrl ? (
-                          <img
-                            src={group.pictureUrl}
-                            alt={group.name}
-                            className="w-full h-full rounded-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-gray-500">👥</span>
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-gray-900">{group.name}</h3>
-                        <p className="text-sm text-gray-500">
-                          {group.participants.toLocaleString()} participantes
-                        </p>
-                      </div>
-                    </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto p-2">
+            {filteredGroups.map(group => (
+              <div
+                key={group.id}
+                className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                  selectedGroups.includes(group.id)
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-blue-300'
+                }`}
+                onClick={() => handleGroupSelect(group.id)}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                    {group.pictureUrl ? (
+                      <img
+                        src={group.pictureUrl}
+                        alt={group.name}
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-gray-500">👥</span>
+                    )}
                   </div>
-                ))}
+                  <div>
+                    <h3 className="font-medium text-gray-900">{group.name}</h3>
+                    <p className="text-sm text-gray-500">
+                      {group.participants.toLocaleString()} participantes
+                    </p>
+                  </div>
+                </div>
               </div>
-            )}
+            ))}
           </div>
+            )}
+        </div>
         )}
         <MessageEditor
           onSave={setMessages}
